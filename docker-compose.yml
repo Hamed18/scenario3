@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:6
+    container_name: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    networks:
+      - observability-net
+
+  backend:
+    build: ./backend
+    container_name: backend
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      NODE_ENV: production
+      MONGO_URI: "mongodb://root:example@mongo:27017/observability?authSource=admin"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+    networks:
+      - observability-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+      - node-exporter
+    networks:
+      - observability-net
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    networks:
+      - observability-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - observability-net
+
+networks:
+  observability-net:
+    driver: bridge
