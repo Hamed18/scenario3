@@ -1,46 +1,27 @@
-import cors from 'cors';
-import express, { Application, Request, Response } from 'express';
-import { globalErrorHandler } from './app/middleeatres/globalErrorHandler';
-import userRouter from './app/modules/user/user.router';
-import authRouter from './app/modules/auth/auth.router';
-import { TeamRegistrationRoutes } from './app/modules/teamRegistration/teamRegistration.router';
+import express from "express";
+import cors from "cors";
+import { healthRouter } from "./app/modules/health";
+import { userRouter } from "./app/modules/user";
+import { metricsMiddleware, metricsRouter } from "./app/modules/observability";
+import { errorHandler } from "./shared/middlewares/errorHandler";
 
-const app: Application = express();
+export function createApp() {
+  const app = express();
 
-//  CORS setup
-app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://localhost:5175",
-      "http://localhost:3000",
-      "https://frontend-iota-drab-32.vercel.app/"
-    ],
-    credentials: true,
-  })
-);
+  // global middlewares
+  app.use(cors());
+  app.use(express.json());
 
-//parsers
-app.use(express.json());
+  // metrics middleware (request duration)
+  app.use(metricsMiddleware);
 
-// application routes
-const getAController = (req: Request, res: Response) => {
-    res.send('Hello World!')
-};
+  // routes
+  app.use("/api/health", healthRouter);
+  app.use("/api/users", userRouter);
+  app.use("/metrics", metricsRouter);
 
-app.get('/', getAController)
-app.use(globalErrorHandler)
+  // error handler (last)
+  app.use(errorHandler);
 
-// routes
-app.use('/api/user', userRouter)
-app.use('/api/auth', authRouter);
-app.use('/api/team-registration', TeamRegistrationRoutes);
-
-app.use("*", (req: Request, res: Response) =>{
-  res.status(404).json({
-    status: false,
-    message: "Route not found"
-  })
-})
-export default app;
+  return app;
+}

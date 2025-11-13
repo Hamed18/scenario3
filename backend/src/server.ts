@@ -1,17 +1,18 @@
-import mongoose from 'mongoose';
-import app from './app';
-import config from './app/config';
+import { createApp } from "./app";
+import { connectDatabase } from "./app/config/database";
+import { env } from "./app/config/env";
 
-async function main() {
-  try {
-   await mongoose.connect(config.database_url as string);
+async function bootstrap() {
+  await connectDatabase();
 
-    app.listen(config.port, () => {
-      console.log(`app is listening on port ${config.port}`);
-    });
-  } catch (err) {
-    console.log(err);
-  }
+  const app = createApp();
+
+  app.listen(env.port, () => {
+    console.log(`Backend listening on port ${env.port}`);
+  });
 }
 
-main();
+bootstrap().catch((err) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
+});
