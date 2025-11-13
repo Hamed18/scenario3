@@ -1,0 +1,20 @@
+groups:
+  - name: backend-alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: app_cpu_usage_percent > 70
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on backend"
+          description: "Backend app CPU usage is above 70% for more than 1 minute."
+
+      - alert: BackendDown
+        expr: up{job="backend"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend is down"
+          description: "The backend has been unreachable for more than 30 seconds."
